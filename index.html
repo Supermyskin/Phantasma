@@ -1,11 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phantasma - Hand Tracker</title>
     <link rel="stylesheet" href="src/style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs"
+        }
+    }
+    </script>
 </head>
+
 <body>
     <div id="container">
         <video id="webcam" autoplay playsinline></video>
@@ -13,4 +22,5 @@
     </div>
     <script src="src/main.js" type="module"></script>
 </body>
+
 </html>
