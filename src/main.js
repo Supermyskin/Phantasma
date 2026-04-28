@@ -1,9 +1,11 @@
 import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { HandTracker } from "./core/HandTracker.js";
+import { Particle } from "./effects/Particle.js";
 
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('canvas');
 const tracker = new HandTracker();
+const particles = [];
 
 async function initializeMediaPipe() {
   const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
@@ -47,55 +49,76 @@ function renderLoop() {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
+    const fingerColors = {
+      thumb: '#FF5733',
+      index: '#33FF57',
+      middle: '#3357FF',
+      ring: '#F333FF',
+      pinky: '#FFFF33'
+    };
+
     if (detections.worldLandmarks) {
-      detections.worldLandmarks.forEach((hand, index) => {
-        const velocity = tracker.calculateVelocity(index, hand, now);
+      detections.worldLandmarks.forEach((hand, handIndex) => {
+        const velocity = tracker.calculateVelocity(handIndex, hand, now);
         if (velocity) {
-          const ctx = canvas.getContext('2d');
           ctx.fillStyle = 'white';
           ctx.font = '12px Arial';
-
           [4, 8, 12, 16, 20].forEach((idx, i) => {
-            const pos = detections.landmarks[index][idx];
+            const pos = detections.landmarks[handIndex][idx];
             ctx.fillText(velocity.fingertips[i].toFixed(2), pos.x * canvas.width + 10, pos.y * canvas.height);
           });
-
-          const wristPos = detections.landmarks[index][0];
-          ctx.fillText(`Palm: ${velocity.palm.toFixed(2)}`, wristPos.x * canvas.width + 10, wristPos.y * canvas.height - 10);
         }
       });
     }
 
     if (detections.landmarks) {
-      const connections = [
-        [0, 1], [1, 2], [2, 3], [3, 4],
-        [0, 5], [5, 6], [6, 7], [7, 8],
-        [5, 9], [9, 10], [10, 11], [11, 12],
-        [9, 13], [13, 14], [14, 15], [15, 16],
-        [13, 17], [17, 18], [18, 19], [19, 20],
-        [0, 17]
-      ];
+      detections.landmarks.forEach((hand) => {
+        // Spawn particles at fingertips
+        [4, 8, 12, 16, 20].forEach((idx, i) => {
+          const color = [fingerColors.thumb, fingerColors.index, fingerColors.middle, fingerColors.ring, fingerColors.pinky][i];
+          const point = hand[idx];
+          particles.push(new Particle(point.x * canvas.width, point.y * canvas.height, color));
+        });
 
-      for (const hand of detections.landmarks) {
-        ctx.beginPath();
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 2;
-        for (const [start, end] of connections) {
-          ctx.moveTo(hand[start].x * canvas.width, hand[start].y * canvas.height);
-          ctx.lineTo(hand[end].x * canvas.width, hand[end].y * canvas.height);
-        }
-        ctx.stroke();
+        const fingerGroups = [
+          { joints: [0, 1, 2, 3, 4], color: fingerColors.thumb },
+          { joints: [0, 5, 6, 7, 8], color: fingerColors.index },
+          { joints: [0, 9, 10, 11, 12], color: fingerColors.middle },
+          { joints: [0, 13, 14, 15, 16], color: fingerColors.ring },
+          { joints: [0, 17, 18, 19, 20], color: fingerColors.pinky }
+        ];
 
-        hand.forEach((point, index) => {
+        fingerGroups.forEach(group => {
           ctx.beginPath();
-          ctx.arc(point.x * canvas.width, point.y * canvas.height, 5, 0, Math.PI * 2);
-          ctx.fillStyle = [4, 8, 12, 16, 20].includes(index) ? 'red' : 'lime';
+          ctx.strokeStyle = group.color;
+          ctx.lineWidth = 3;
+          for (let i = 0; i < group.joints.length - 1; i++) {
+            const start = hand[group.joints[i]];
+            const end = hand[group.joints[i + 1]];
+            ctx.moveTo(start.x * canvas.width, start.y * canvas.height);
+            ctx.lineTo(end.x * canvas.width, end.y * canvas.height);
+          }
+          ctx.stroke();
+        });
+
+        hand.forEach((point) => {
+          ctx.beginPath();
+          ctx.fillStyle = 'white';
+          ctx.arc(point.x * canvas.width, point.y * canvas.height, 3, 0, Math.PI * 2);
           ctx.fill();
         });
-      }
+      });
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.update();
+      p.draw(ctx);
+      if (p.lifespan <= 0) particles.splice(i, 1);
     }
   }
 
   requestAnimationFrame(renderLoop);
 }
+
 startCamera();
