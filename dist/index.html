@@ -5,11 +5,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phantasma - Hand Tracker</title>
-  <script type="module" crossorigin src="/assets/index-1C_wL9cW.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-BU8s4geU.css">
+
+    <script type="importmap">
+    {
+        "imports": {
+            "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs"
+        }
+    }
+    </script>
+  <script type="module" crossorigin src="/assets/index-DY2GTp70.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-D1E-pJFI.css">
 </head>
 
 <body>
+    <div id="controls">
+        <label class="toggle">
+            <input type="checkbox" id="showLines" checked>
+            <span class="slider"></span>
+            <span class="label">Lines</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" id="showDots" checked>
+            <span class="slider"></span>
+            <span class="label">Dots</span>
+        </label>
+        <button id="warpMode" class="mode-button" type="button" aria-pressed="false">Palm Warp</button>
+        <button id="cubeMode" class="mode-button cube-button" type="button" aria-pressed="false">Glass Cube</button>
+    </div>
+
     <div id="container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="canvas"></canvas>
