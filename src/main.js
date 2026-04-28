@@ -1,7 +1,9 @@
 import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import { HandTracker } from "./core/HandTracker.js";
 
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('canvas');
+const tracker = new HandTracker();
 
 async function initializeMediaPipe() {
   const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
@@ -37,12 +39,33 @@ async function startCamera() {
 let lastVideoTime = -1;
 function renderLoop() {
   if (video.currentTime !== lastVideoTime) {
-    const detections = handLandmarker.detectForVideo(video, performance.now());
+    const now = performance.now();
+    const detections = handLandmarker.detectForVideo(video, now);
     lastVideoTime = video.currentTime;
     const ctx = canvas.getContext('2d');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
+
+    if (detections.worldLandmarks) {
+      detections.worldLandmarks.forEach((hand, index) => {
+        const velocity = tracker.calculateVelocity(index, hand, now);
+        if (velocity) {
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = 'white';
+          ctx.font = '12px Arial';
+
+          [4, 8, 12, 16, 20].forEach((idx, i) => {
+            const pos = detections.landmarks[index][idx];
+            ctx.fillText(velocity.fingertips[i].toFixed(2), pos.x * canvas.width + 10, pos.y * canvas.height);
+          });
+
+          const wristPos = detections.landmarks[index][0];
+          ctx.fillText(`Palm: ${velocity.palm.toFixed(2)}`, wristPos.x * canvas.width + 10, wristPos.y * canvas.height - 10);
+        }
+      });
+    }
+
     if (detections.landmarks) {
       const connections = [
         [0, 1], [1, 2], [2, 3], [3, 4],
