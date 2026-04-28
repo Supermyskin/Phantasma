@@ -16,6 +16,19 @@
 </head>
 
 <body>
+    <div id="controls">
+        <label class="toggle">
+            <input type="checkbox" id="showLines" checked>
+            <span class="slider"></span>
+            <span class="label">Lines</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" id="showDots" checked>
+            <span class="slider"></span>
+            <span class="label">Dots</span>
+        </label>
+    </div>
+
     <div id="container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="canvas"></canvas>
