@@ -1,4 +1,4 @@
-import { HandLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import { HandLandmarker, FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 import { HandTracker } from "./core/HandTracker.js";
 
 const video = document.getElementById('webcam');
@@ -6,10 +6,14 @@ const canvas = document.getElementById('canvas');
 const tracker = new HandTracker();
 const showLines = document.getElementById('showLines');
 const showDots = document.getElementById('showDots');
+const faceRecognitionToggle = document.getElementById('faceRecognition');
 const warpModeButton = document.getElementById('warpMode');
 const cubeModeButton = document.getElementById('cubeMode');
+const facePixelateModeButton = document.getElementById('facePixelateMode');
 const offscreenCanvas = document.createElement('canvas');
 const offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+const pixelationCanvas = document.createElement('canvas');
+const pixelationCtx = pixelationCanvas.getContext('2d');
 
 const modeState = {
   selected: null
@@ -18,14 +22,26 @@ const modeState = {
 async function initializeMediaPipe() {
   const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
   const handLandmarker = await HandLandmarker.createFromOptions(vision, {
-    baseOptions: { modelAssetPath: "/public/hand_landmarker.task" },
+    baseOptions: { modelAssetPath: "public/hand_landmarker.task" },
     numHands: 2,
     runningMode: "video"
   });
-  return handLandmarker;
+
+  let faceDetector = null;
+  try {
+    faceDetector = await FaceDetector.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: "public/face_recognition.task" },
+      runningMode: "video",
+      minDetectionConfidence: 0.55
+    });
+  } catch (error) {
+    console.warn("Face detector failed to initialize:", error);
+  }
+
+  return { handLandmarker, faceDetector };
 }
 
-const handLandmarker = await initializeMediaPipe();
+const { handLandmarker, faceDetector } = await initializeMediaPipe();
 
 async function startCamera() {
   try {
@@ -79,6 +95,10 @@ function midpoint(a, b) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+function lerp(start, end, amount) {
+  return start + (end - start) * amount;
+}
+
 function handCenter(hand, width, height) {
   const ids = [0, 5, 9, 13, 17];
   const total = ids.reduce((sum, id) => {
@@ -87,6 +107,14 @@ function handCenter(hand, width, height) {
     return sum;
   }, { x: 0, y: 0 });
   return { x: total.x / ids.length, y: total.y / ids.length };
+}
+
+function averagePoint(points) {
+  const total = points.reduce((sum, point) => addPoint(sum, point), { x: 0, y: 0 });
+  return {
+    x: total.x / points.length,
+    y: total.y / points.length
+  };
 }
 
 function clamp(value, min, max) {
@@ -124,6 +152,18 @@ function addPoint(a, b) {
 
 function subtractPoint(a, b) {
   return { x: a.x - b.x, y: a.y - b.y };
+}
+
+function measureHandClosedness(hand, width, height) {
+  const palm = averagePoint([0, 5, 9, 13, 17].map(id => toCanvas(hand[id], width, height)));
+  const palmSpan = Math.max(
+    dist(toCanvas(hand[5], width, height), toCanvas(hand[17], width, height)),
+    24
+  );
+  const tipDistances = TIP_IDS.map(id => dist(toCanvas(hand[id], width, height), palm));
+  const normalizedAverage = tipDistances.reduce((sum, value) => sum + value, 0) / (tipDistances.length * palmSpan);
+  const openness = clamp((normalizedAverage - 0.55) / 0.75, 0, 1);
+  return 1 - openness;
 }
 
 function orderPointsClockwise(points) {
@@ -315,14 +355,78 @@ function drawMirroredText(ctx, text, x, y) {
   ctx.restore();
 }
 
+function getExpandedFaceBounds(boundingBox, width, height) {
+  if (!boundingBox) {
+    return null;
+  }
+
+  const expandX = boundingBox.width * 0.18;
+  const expandY = boundingBox.height * 0.28;
+  const minX = clamp(Math.floor(boundingBox.originX - expandX), 0, width - 1);
+  const minY = clamp(Math.floor(boundingBox.originY - expandY), 0, height - 1);
+  const maxX = clamp(Math.ceil(boundingBox.originX + boundingBox.width + expandX), 1, width);
+  const maxY = clamp(Math.ceil(boundingBox.originY + boundingBox.height + expandY), 1, height);
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+function applyPixelationToFace(ctx, sourceCanvas, faceBounds, amount) {
+  if (!faceBounds || amount <= 0.01 || faceBounds.width < 2 || faceBounds.height < 2) {
+    return;
+  }
+
+  const cellSize = Math.round(lerp(1, 26, amount));
+  const scaledWidth = Math.max(1, Math.round(faceBounds.width / cellSize));
+  const scaledHeight = Math.max(1, Math.round(faceBounds.height / cellSize));
+
+  pixelationCanvas.width = scaledWidth;
+  pixelationCanvas.height = scaledHeight;
+  pixelationCtx.clearRect(0, 0, scaledWidth, scaledHeight);
+  pixelationCtx.drawImage(
+    sourceCanvas,
+    faceBounds.x,
+    faceBounds.y,
+    faceBounds.width,
+    faceBounds.height,
+    0,
+    0,
+    scaledWidth,
+    scaledHeight
+  );
+
+  ctx.save();
+  ctx.globalAlpha = amount;
+  ctx.imageSmoothingEnabled = false;
+  ctx.beginPath();
+  ctx.ellipse(
+    faceBounds.x + faceBounds.width / 2,
+    faceBounds.y + faceBounds.height / 2,
+    faceBounds.width / 2,
+    faceBounds.height / 2,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.clip();
+  ctx.drawImage(pixelationCanvas, 0, 0, scaledWidth, scaledHeight, faceBounds.x, faceBounds.y, faceBounds.width, faceBounds.height);
+  ctx.restore();
+}
+
 let lastVideoTime = -1;
 
 function setSelectedMode(mode) {
   modeState.selected = modeState.selected === mode ? null : mode;
   warpModeButton.classList.toggle('active', modeState.selected === 'warp');
   cubeModeButton.classList.toggle('active', modeState.selected === 'cube');
+  facePixelateModeButton.classList.toggle('active', modeState.selected === 'facePixelate');
   warpModeButton.setAttribute('aria-pressed', String(modeState.selected === 'warp'));
   cubeModeButton.setAttribute('aria-pressed', String(modeState.selected === 'cube'));
+  facePixelateModeButton.setAttribute('aria-pressed', String(modeState.selected === 'facePixelate'));
 }
 
 warpModeButton.addEventListener('click', () => {
@@ -331,6 +435,10 @@ warpModeButton.addEventListener('click', () => {
 
 cubeModeButton.addEventListener('click', () => {
   setSelectedMode('cube');
+});
+
+facePixelateModeButton.addEventListener('click', () => {
+  setSelectedMode('facePixelate');
 });
 
 function renderLoop() {
@@ -348,6 +456,21 @@ function renderLoop() {
 
     offscreenCtx.drawImage(video, 0, 0, W, H);
     ctx.drawImage(offscreenCanvas, 0, 0, W, H);
+
+    const faceRecognitionEnabled = faceRecognitionToggle.checked && faceDetector;
+    const faceDetections = faceRecognitionEnabled
+      ? faceDetector.detectForVideo(video, now).detections ?? []
+      : [];
+    const handClosedness = detections.landmarks?.length
+      ? Math.max(...detections.landmarks.map(hand => measureHandClosedness(hand, W, H)))
+      : 0;
+
+    if (modeState.selected === 'facePixelate' && faceDetections.length > 0) {
+      faceDetections.forEach((face) => {
+        const faceBounds = getExpandedFaceBounds(face.boundingBox, W, H);
+        applyPixelationToFace(ctx, offscreenCanvas, faceBounds, handClosedness);
+      });
+    }
 
     if (modeState.selected === 'warp' && detections.landmarks?.length === 2) {
       const { polygon, leftCenter, rightCenter } = createBridgeRegion(detections.landmarks[0], detections.landmarks[1], W, H);
@@ -439,6 +562,18 @@ function renderLoop() {
           drawMirroredText(ctx, `${dist(a, b).toFixed(0)}px`, mid.x + 4, mid.y - 4);
         });
       }
+
+      if (modeState.selected === 'facePixelate') {
+        ctx.fillStyle = 'rgba(255, 211, 90, 0.95)';
+        ctx.font = '13px Arial';
+        drawMirroredText(ctx, `Hand closed: ${(handClosedness * 100).toFixed(0)}%`, 18, 28);
+      }
+    }
+
+    if (faceRecognitionToggle.checked && !faceDetector) {
+      ctx.fillStyle = 'rgba(255, 120, 120, 0.95)';
+      ctx.font = '13px Arial';
+      drawMirroredText(ctx, 'Face model unavailable', 18, H - 16);
     }
   }
 

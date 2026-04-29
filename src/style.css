@@ -97,6 +97,12 @@ body {
     color: #0d1a22;
 }
 
+.face-button.active {
+    background: #ffd35a;
+    border-color: #ffe7a3;
+    color: #201400;
+}
+
 #container {
     position: relative;
     transform: rotateY(180deg);
