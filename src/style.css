@@ -1,3 +1,4 @@
+/* GLOBAL RESET */
 * {
     margin: 0;
     padding: 0;
@@ -5,28 +6,49 @@
 }
 
 body {
-    background: #111;
+    background: #0d0f12;
+    font-family: "Inter", sans-serif;
+    min-height: 100vh;
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 16px;
     padding: 20px;
+    color: #e5e7eb;
+}
+
+.app-shell {
+    width: min(1400px, 100%);
+    background: #0d0f12;
+    border-radius: 28px;
+    box-shadow: 12px 12px 24px #07080a,
+        -12px -12px 24px #15181d;
+    overflow: hidden;
+}
+
+/* MAIN LAYOUT */
+.dashboard {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: 600px;
+}
+
+.sidebar {
+    padding: 28px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 #controls {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 24px;
-    z-index: 10;
 }
 
+/* TOGGLE SWITCHES */
 .toggle {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
     cursor: pointer;
-    user-select: none;
 }
 
 .toggle input {
@@ -34,95 +56,156 @@ body {
 }
 
 .slider {
+    width: 54px;
+    height: 28px;
+    border-radius: 30px;
+    background: #16191f;
     position: relative;
-    width: 44px;
-    height: 24px;
-    background: #444;
-    border-radius: 12px;
-    transition: background 0.2s;
+
+    /* CLEANER, SHARPER NEUMORPHIC SHADOWS */
+    box-shadow:
+        inset 2px 2px 4px rgba(0, 0, 0, 0.6),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.05);
 }
 
 .slider::after {
-    content: '';
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    background: white;
+    content: "";
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
+    position: absolute;
     top: 3px;
-    left: 3px;
-    transition: transform 0.2s;
+    left: 4px;
+    background: #0d0f12;
+
+    /* CLEANER BALL SHADOW */
+    box-shadow:
+        2px 2px 4px rgba(0, 0, 0, 0.7),
+        -2px -2px 4px rgba(255, 255, 255, 0.05);
+
+    transition: 0.25s ease;
 }
 
+/* BLUE WHEN ACTIVE */
 .toggle input:checked+.slider {
-    background: #33FF57;
+    background: #2563eb;
 }
 
 .toggle input:checked+.slider::after {
-    transform: translateX(20px);
+    transform: translateX(24px);
 }
 
 .label {
-    color: white;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
+    color: #e5e7eb;
+    font-weight: 600;
 }
 
-.mode-button {
-    border: 1px solid #5d6470;
-    background: #1b1e25;
-    color: white;
-    padding: 10px 16px;
-    border-radius: 999px;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s, transform 0.2s;
-}
-
-.mode-button:hover {
-    background: #262b35;
-    border-color: #8c94a3;
-}
-
-.mode-button.active {
-    background: #ff8b2c;
-    border-color: #ffc083;
-    color: #111;
-}
-
-.cube-button.active {
-    background: #a9efff;
-    border-color: #d9f8ff;
-    color: #0d1a22;
-}
-
-.face-button.active {
-    background: #ffd35a;
-    border-color: #ffe7a3;
-    color: #201400;
+/* CAMERA PANEL */
+.camera-panel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
 }
 
 #container {
     position: relative;
+    width: 100%;
+    max-width: 850px;
+    aspect-ratio: 4/3;
+    border-radius: 24px;
+    overflow: hidden;
     transform: rotateY(180deg);
-    -webkit-transform: rotateY(180deg);
-    -moz-transform: rotateY(180deg);
-    width: 640px;
-    height: 480px;
-    max-width: calc(100vw - 40px);
-    aspect-ratio: 4 / 3;
+
+    box-shadow:
+        10px 10px 20px #07080a,
+        -10px -10px 20px #15181d;
 }
 
 #webcam,
 #canvas {
     position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
 }
 
 #canvas {
-    z-index: 1;
+    z-index: 2;
+}
+
+/* FOOTER */
+.bottom-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.video-node {
+    width: 180px;
+    height: 120px;
+    border-radius: 22px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+
+    box-shadow:
+        8px 8px 16px #07080a,
+        -8px -8px 16px #15181d;
+}
+
+/* MODE BUTTONS */
+.mode-links {
+    display: flex;
+    gap: 18px;
+}
+
+.mode-button {
+    border: none;
+    padding: 14px 24px;
+    border-radius: 18px;
+    background: #16191f;
+    color: #e5e7eb;
+    font-weight: 700;
+    cursor: pointer;
+
+    box-shadow:
+        6px 6px 12px #07080a,
+        -6px -6px 12px #15181d;
+
+    transition: 0.25s ease;
+}
+
+.mode-button:hover {
+    transform: translateY(-2px);
+}
+
+.mode-button.active {
+    box-shadow:
+        inset 3px 3px 5px #07080a,
+        inset -3px -3px 5px #15181d;
+}
+
+/* MODE COLORS */
+.mode-button.active.warp-button {
+    background: #f97316;
+    box-shadow:
+        inset 3px 3px 5px #c56927,
+        inset -3px -3px 5px #f4a46a;
+}
+
+.mode-button.active.cube-button {
+    background: #38bdf8;
+    box-shadow:
+        inset 3px 3px 5px #1c7398,
+        inset -3px -3px 5px rgb(89, 201, 249);
+}
+
+.mode-button.active.face-button {
+    background: #a855f7;
+    box-shadow:
+        inset 3px 3px 5px #50316d,
+        inset -3px -3px 5px #bc75ff;
 }

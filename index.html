@@ -16,31 +16,58 @@
 </head>
 
 <body>
-    <div id="controls">
-        <label class="toggle">
-            <input type="checkbox" id="showLines" checked>
-            <span class="slider"></span>
-            <span class="label">Lines</span>
-        </label>
-        <label class="toggle">
-            <input type="checkbox" id="showDots" checked>
-            <span class="slider"></span>
-            <span class="label">Dots</span>
-        </label>
-        <label class="toggle">
-            <input type="checkbox" id="faceRecognition">
-            <span class="slider"></span>
-            <span class="label">Face Recognition</span>
-        </label>
-        <button id="warpMode" class="mode-button" type="button" aria-pressed="false">Palm Warp</button>
-        <button id="cubeMode" class="mode-button cube-button" type="button" aria-pressed="false">Glass Cube</button>
-        <button id="facePixelateMode" class="mode-button face-button" type="button" aria-pressed="false">Hand Pixelate</button>
+    <div class="app-shell">
+
+        <main class="dashboard">
+
+            <aside class="sidebar">
+                <div id="controls">
+                    <label class="toggle">
+                        <input type="checkbox" id="showLines" checked>
+                        <span class="slider"></span>
+                        <span class="label">Lines</span>
+                    </label>
+
+                    <label class="toggle">
+                        <input type="checkbox" id="showDots" checked>
+                        <span class="slider"></span>
+                        <span class="label">Dots</span>
+                    </label>
+
+                    <label class="toggle">
+                        <input type="checkbox" id="showDebug">
+                        <span class="slider"></span>
+                        <span class="label">Debug Info</span>
+                    </label>
+
+                    <label class="toggle">
+                        <input type="checkbox" id="faceRecognition">
+                        <span class="slider"></span>
+                        <span class="label">Face Recognition</span>
+                    </label>
+                </div>
+            </aside>
+
+            <section class="camera-panel">
+                <div id="container">
+                    <video id="webcam" autoplay playsinline></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bottom-panel">
+            <div class="video-node">VIDEO</div>
+
+            <div class="mode-links">
+                <button id="warpMode" class="mode-button warp-button">Palm Warp</button>
+                <button id="cubeMode" class="mode-button cube-button">Glass Cube</button>
+                <button id="facePixelateMode" class="mode-button face-button">Hand Pixelate</button>
+            </div>
+        </footer>
+
     </div>
 
-    <div id="container">
-        <video id="webcam" autoplay playsinline></video>
-        <canvas id="canvas"></canvas>
-    </div>
     <script src="src/main.js" type="module"></script>
 </body>
 

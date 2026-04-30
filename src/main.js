@@ -6,6 +6,7 @@ const canvas = document.getElementById('canvas');
 const tracker = new HandTracker();
 const showLines = document.getElementById('showLines');
 const showDots = document.getElementById('showDots');
+const showDebug = document.getElementById('showDebug');
 const faceRecognitionToggle = document.getElementById('faceRecognition');
 const warpModeButton = document.getElementById('warpMode');
 const cubeModeButton = document.getElementById('cubeMode');
@@ -480,7 +481,7 @@ function renderLoop() {
       applyBridgeWarp(ctx, W, H, polygon, leftCenter, rightCenter, strength, now);
     }
 
-    if (detections.worldLandmarks) {
+    if (detections.worldLandmarks && showDebug.checked) {
       detections.worldLandmarks.forEach((hand, handIndex) => {
         const velocity = tracker.calculateVelocity(handIndex, hand, now);
         if (velocity) {
