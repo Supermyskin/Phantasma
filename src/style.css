@@ -209,3 +209,10 @@ body {
         inset 3px 3px 5px #50316d,
         inset -3px -3px 5px #bc75ff;
 }
+
+.mode-button.active.hologram-button {
+    background: #06b6d4;
+    box-shadow:
+        inset 3px 3px 5px #047487,
+        inset -3px -3px 5px #08e4f5;
+}

@@ -10,6 +10,7 @@ const showDebug = document.getElementById('showDebug');
 const faceRecognitionToggle = document.getElementById('faceRecognition');
 const warpModeButton = document.getElementById('warpMode');
 const cubeModeButton = document.getElementById('cubeMode');
+const hologramModeButton = document.getElementById('hologramMode');
 const facePixelateModeButton = document.getElementById('facePixelateMode');
 const offscreenCanvas = document.createElement('canvas');
 const offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
@@ -348,6 +349,45 @@ function drawGlassCube(ctx, handA, handB, width, height) {
   ctx.restore();
 }
 
+function drawHologramCube(ctx, leftHand, rightHand, width, height, time) {
+  const leftPalm = handCenter(leftHand, width, height);
+  const scale = 40 + measureHandClosedness(rightHand, width, height) * 80;
+  
+  // Use hand orientation: Calculate angle based on the vector between wrist and middle knuckle
+  const wrist = rightHand[0];
+  const middleKnuckle = rightHand[9];
+  const handAngle = Math.atan2(middleKnuckle.y - wrist.y, middleKnuckle.x - wrist.x);
+  const rotation = handAngle * 2;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = 'cyan';
+
+  // Draw wireframe sphere
+  const segments = 8;
+  for (let i = 0; i <= segments; i++) {
+    const angle = (i / segments) * Math.PI;
+    const radius = Math.sin(angle) * scale;
+    const yOffset = Math.cos(angle) * scale;
+
+    ctx.beginPath();
+    ctx.arc(leftPalm.x, leftPalm.y + yOffset * Math.cos(rotation), radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(leftPalm.x + Math.cos(angle + rotation) * scale, leftPalm.y - Math.sin(angle + rotation) * (scale * 0.5));
+    ctx.lineTo(leftPalm.x + Math.cos(angle + rotation) * scale, leftPalm.y + Math.sin(angle + rotation) * (scale * 0.5));
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawMirroredText(ctx, text, x, y) {
   ctx.save();
   ctx.translate(x, y);
@@ -424,9 +464,11 @@ function setSelectedMode(mode) {
   modeState.selected = modeState.selected === mode ? null : mode;
   warpModeButton.classList.toggle('active', modeState.selected === 'warp');
   cubeModeButton.classList.toggle('active', modeState.selected === 'cube');
+  hologramModeButton.classList.toggle('active', modeState.selected === 'hologram');
   facePixelateModeButton.classList.toggle('active', modeState.selected === 'facePixelate');
   warpModeButton.setAttribute('aria-pressed', String(modeState.selected === 'warp'));
   cubeModeButton.setAttribute('aria-pressed', String(modeState.selected === 'cube'));
+  hologramModeButton.setAttribute('aria-pressed', String(modeState.selected === 'hologram'));
   facePixelateModeButton.setAttribute('aria-pressed', String(modeState.selected === 'facePixelate'));
 }
 
@@ -436,6 +478,10 @@ warpModeButton.addEventListener('click', () => {
 
 cubeModeButton.addEventListener('click', () => {
   setSelectedMode('cube');
+});
+
+hologramModeButton.addEventListener('click', () => {
+  setSelectedMode('hologram');
 });
 
 facePixelateModeButton.addEventListener('click', () => {
@@ -498,6 +544,11 @@ function renderLoop() {
     if (detections.landmarks) {
       if (modeState.selected === 'cube' && detections.landmarks.length === 2) {
         drawGlassCube(ctx, detections.landmarks[0], detections.landmarks[1], W, H);
+      }
+
+      if (modeState.selected === 'hologram' && detections.landmarks.length === 2) {
+        const { left, right } = sortHands(detections.landmarks[0], detections.landmarks[1], W, H);
+        drawHologramCube(ctx, left, right, W, H, now);
       }
 
       detections.landmarks.forEach((hand, handIndex) => {
